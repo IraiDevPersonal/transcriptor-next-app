@@ -18,10 +18,14 @@
     "openai": "^4.77.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["ffmpeg-static", "ffprobe-static"]
+    "onlyBuiltDependencies": [
+      "ffmpeg-static",
+      "ffprobe-static"
+    ]
   },
   "devDependencies": {
     "@types/fluent-ffmpeg": "^2.1.27",
