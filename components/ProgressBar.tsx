@@ -2,42 +2,62 @@
 
 import type { TranscriptionStatus } from "@/types/transcription";
 
-interface ProgressBarProps {
+interface Props {
   status: TranscriptionStatus;
   message?: string;
 }
 
 const LABELS: Record<TranscriptionStatus, string> = {
-  idle: "Listo",
-  uploading: "Subiendo archivo...",
-  processing: "Dividiendo y transcribiendo...",
+  idle: "",
+  uploading: "Subiendo archivo…",
+  processing: "Transcribiendo audio…",
   complete: "Completado",
   error: "Error",
 };
 
-export function ProgressBar({ status, message }: ProgressBarProps) {
+export function ProgressBar({ status, message }: Props) {
   if (status === "idle") return null;
 
-  const animated = status === "uploading" || status === "processing";
+  const isActive = status === "uploading" || status === "processing";
+  const isError = status === "error";
+  const isDone = status === "complete";
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
-        <span>{message ?? LABELS[status]}</span>
-        {animated && (
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            Esto puede tardar varios minutos
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span
+          style={{ color: isError ? "var(--error-text)" : "var(--text-1)" }}
+          className="text-sm font-medium"
+        >
+          {message ?? LABELS[status]}
+        </span>
+        {isActive && (
+          <span style={{ color: "var(--text-3)" }} className="text-xs">
+            Esto puede tardar varios minutos…
+          </span>
+        )}
+        {isDone && (
+          <span style={{ color: "var(--accent)" }} className="text-xs font-medium">
+            ✓
           </span>
         )}
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+
+      <div
+        style={{ backgroundColor: "var(--progress-track)" }}
+        className="h-1 w-full overflow-hidden rounded-full"
+      >
         <div
-          className={`h-full ${
-            status === "error"
-              ? "w-full bg-red-500"
-              : status === "complete"
-                ? "w-full bg-emerald-500"
-                : "w-1/3 animate-pulse bg-slate-900 dark:bg-white"
+          style={{
+            backgroundColor: isError
+              ? "var(--error-border)"
+              : isDone
+                ? "var(--accent)"
+                : "var(--progress-fill)",
+            width: isActive ? "40%" : "100%",
+          }}
+          className={`h-full rounded-full transition-all duration-500 ${
+            isActive ? "animate-pulse" : ""
           }`}
         />
       </div>

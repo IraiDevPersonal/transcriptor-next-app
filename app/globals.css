@@ -2,17 +2,96 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
+/* ─── Tema Rose (claro) ────────────────────────────────────────────── */
+[data-theme="rose"] {
+  --bg:              #fff1f2;
+  --bg-card:         #ffffff;
+  --bg-input:        #ffffff;
+  --bg-result:       #fff1f2;
+  --bg-subtle:       #ffe4e6;
+
+  --border:          #fecdd3;
+  --border-strong:   #fb7185;
+  --border-focus:    #e11d48;
+
+  --text-1:          #881337;
+  --text-2:          #be123c;
+  --text-3:          #e11d48;
+  --text-muted:      #fda4af;
+
+  --accent:          #e11d48;
+  --accent-hover:    #be123c;
+  --accent-fg:       #ffffff;
+
+  --progress-track:  #ffe4e6;
+  --progress-fill:   #fb7185;
+
+  --error-bg:        #fff1f2;
+  --error-border:    #fb7185;
+  --error-text:      #9f1239;
+
+  --warn-bg:         #fffbeb;
+  --warn-border:     #fcd34d;
+  --warn-text:       #92400e;
+}
+
+/* ─── Tema Default (oscuro neutral) ──────────────────────────────── */
+[data-theme="default"] {
+  --bg:              #0a0a0a;
+  --bg-card:         #111111;
+  --bg-input:        #1a1a1a;
+  --bg-result:       #0d0d0d;
+  --bg-subtle:       #1a1a1a;
+
+  --border:          #222222;
+  --border-strong:   #333333;
+  --border-focus:    #555555;
+
+  --text-1:          #f0f0f0;
+  --text-2:          #a0a0a0;
+  --text-3:          #707070;
+  --text-muted:      #444444;
+
+  --accent:          #f0f0f0;
+  --accent-hover:    #ffffff;
+  --accent-fg:       #0a0a0a;
+
+  --progress-track:  #1a1a1a;
+  --progress-fill:   #555555;
+
+  --error-bg:        #1a0505;
+  --error-border:    #450a0a;
+  --error-text:      #fca5a5;
+
+  --warn-bg:         #1a1200;
+  --warn-border:     #451a00;
+  --warn-text:       #fde68a;
+}
+
+/* ─── Base ────────────────────────────────────────────────────────── */
+html {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   height: 100%;
+  background-color: var(--bg);
+  color: var(--text-1);
+  transition: background-color 0.2s ease, color 0.15s ease;
 }
 
-body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+/* Scrollbar sutil */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 99px;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    @apply bg-slate-950 text-slate-100;
-  }
+/* Focus ring global */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
 }

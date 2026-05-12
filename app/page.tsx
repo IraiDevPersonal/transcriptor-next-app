@@ -6,6 +6,7 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { ResultCard } from "@/components/ResultCard";
 import { DownloadButtons } from "@/components/DownloadButtons";
 import { ProcessingOptions } from "@/components/ProcessingOptions";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type {
   PostProcessOptions,
   PostProcessResult,
@@ -21,6 +22,13 @@ const DEFAULT_OPTIONS: PostProcessOptions = {
 };
 
 type AppStatus = TranscriptionStatus | "postprocessing";
+
+const STATUS_LABEL: Record<string, string> = {
+  uploading: "Subiendo archivo…",
+  processing: "Transcribiendo audio…",
+  postprocessing: "Aplicando procesamiento con IA…",
+  complete: "Completado",
+};
 
 export default function HomePage() {
   const [status, setStatus] = useState<AppStatus>("idle");
@@ -51,22 +59,17 @@ export default function HomePage() {
         method: "POST",
         body: formData,
       });
-
-      if (!res.ok) {
-        const data = await safeJson(res);
-        throw new Error(data?.error ?? `Error ${res.status}`);
-      }
-
+      if (!res.ok)
+        throw new Error((await safeJson(res))?.error ?? `Error ${res.status}`);
       transcription = (await res.json()) as TranscriptionResult;
       setResult(transcription);
     } catch (err) {
-      setErrorMessage(toMessage(err));
+      setErrorMessage(toMsg(err));
       setStatus("error");
       return;
     }
 
-    const anyOption = Object.values(options).some(Boolean);
-    if (!anyOption) {
+    if (!Object.values(options).some(Boolean)) {
       setStatus("complete");
       return;
     }
@@ -82,100 +85,160 @@ export default function HomePage() {
           verboseSegments: transcription.verboseSegments,
         }),
       });
-
-      if (!res.ok) {
-        const data = await safeJson(res);
-        throw new Error(data?.error ?? `Error ${res.status}`);
-      }
-
-      const processed = (await res.json()) as PostProcessResult;
-      setPostResult(processed);
+      if (!res.ok)
+        throw new Error((await safeJson(res))?.error ?? `Error ${res.status}`);
+      setPostResult((await res.json()) as PostProcessResult);
     } catch (err) {
-      setErrorMessage(`Post-procesamiento fallido: ${toMessage(err)}`);
+      setErrorMessage(`Post-procesamiento fallido: ${toMsg(err)}`);
     }
 
     setStatus("complete");
   }
 
-  const progressMessage: Record<string, string> = {
-    uploading: "Subiendo archivo...",
-    processing: "Transcribiendo audio...",
-    postprocessing: "Aplicando opciones de procesamiento...",
-    complete: "Completado",
-    error: errorMessage ?? "Error",
-  };
+  const progressStatus =
+    status === "postprocessing"
+      ? "processing"
+      : (status as TranscriptionStatus);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 px-4 py-10">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          Transcriptor de Audio
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Sube un archivo de audio (mp3, wav, m4a, webm) y obtén la transcripción
-          en .txt o .md.
-        </p>
+    <div className="flex min-h-screen flex-col">
+      {/* Top bar */}
+      <header
+        style={{
+          backgroundColor: "var(--bg-card)",
+          borderBottom: "1px solid var(--border)",
+        }}
+        className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+      >
+        <div className="flex items-center gap-2.5">
+          <span
+            style={{
+              backgroundColor: "var(--accent)",
+              color: "var(--accent-fg)",
+            }}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold"
+          >
+            T
+          </span>
+          <span
+            style={{ color: "var(--text-1)" }}
+            className="text-sm font-semibold"
+          >
+            TranscriApp
+          </span>
+        </div>
+        <ThemeToggle />
       </header>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="space-y-5">
+      {/* Main */}
+      <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-8">
+        {/* Upload card */}
+        <section
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border)",
+          }}
+          className="rounded-2xl p-5 space-y-5"
+        >
+          <div>
+            <h1
+              style={{ color: "var(--text-1)" }}
+              className="text-base font-semibold"
+            >
+              Transcripción de sesión
+            </h1>
+            <p style={{ color: "var(--text-2)" }} className="mt-0.5 text-xs">
+              mp3 · wav · m4a · webm — hasta 60 min
+            </p>
+          </div>
+
           <UploadForm disabled={isBusy} onSubmit={handleTranscribe} />
-          <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+
+          <div
+            style={{ borderTop: "1px solid var(--border)" }}
+            className="pt-4"
+          >
             <ProcessingOptions
               value={options}
               onChange={setOptions}
               disabled={isBusy}
             />
           </div>
-        </div>
-      </section>
-
-      {status !== "idle" && (
-        <section>
-          <ProgressBar
-            status={status === "postprocessing" ? "processing" : status}
-            message={progressMessage[status]}
-          />
         </section>
-      )}
 
-      {status !== "idle" && errorMessage && status !== "complete" && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-          {errorMessage}
-        </div>
-      )}
+        {/* Progress */}
+        {status !== "idle" && (
+          <section
+            style={{
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border)",
+            }}
+            className="rounded-2xl px-5 py-4"
+          >
+            <ProgressBar
+              status={progressStatus}
+              message={STATUS_LABEL[status]}
+            />
+          </section>
+        )}
 
-      {result && status === "complete" && (
-        <>
-          {errorMessage && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-              {errorMessage}
-            </div>
-          )}
-          <ResultCard
-            result={result}
-            processedText={postResult?.processedText}
-            summary={postResult?.summary}
-          />
-          <DownloadButtons
-            result={result}
-            processedText={postResult?.processedText}
-            summary={postResult?.summary}
-          />
-        </>
-      )}
-    </main>
+        {/* Error fatal */}
+        {status === "error" && errorMessage && (
+          <div
+            style={{
+              backgroundColor: "var(--error-bg)",
+              border: "1px solid var(--error-border)",
+              color: "var(--error-text)",
+            }}
+            className="rounded-2xl px-4 py-3 text-sm"
+          >
+            {errorMessage}
+          </div>
+        )}
+
+        {/* Result */}
+        {result && status === "complete" && (
+          <>
+            {/* Warning de post-proceso fallido */}
+            {errorMessage && (
+              <div
+                style={{
+                  backgroundColor: "var(--warn-bg)",
+                  border: "1px solid var(--warn-border)",
+                  color: "var(--warn-text)",
+                }}
+                className="rounded-2xl px-4 py-3 text-sm"
+              >
+                {errorMessage}
+              </div>
+            )}
+
+            <ResultCard
+              result={result}
+              processedText={postResult?.processedText}
+              summary={postResult?.summary}
+            />
+
+            <DownloadButtons
+              result={result}
+              processedText={postResult?.processedText}
+              summary={postResult?.summary}
+            />
+          </>
+        )}
+      </main>
+    </div>
   );
 }
 
-async function safeJson(res: Response): Promise<{ error?: string } | null> {
+async function safeJson(r: Response): Promise<{ error?: string } | null> {
   try {
-    return (await res.json()) as { error?: string };
+    return (await r.json()) as { error?: string };
   } catch {
     return null;
   }
 }
 
-function toMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Error desconocido.";
+function toMsg(e: unknown): string {
+  return e instanceof Error ? e.message : "Error desconocido.";
 }

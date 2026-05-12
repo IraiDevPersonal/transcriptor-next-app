@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { TranscriptionResult } from "@/types/transcription";
 
-interface ResultCardProps {
+interface Props {
   result: TranscriptionResult;
   processedText?: string;
   summary?: string | null;
@@ -11,7 +11,7 @@ interface ResultCardProps {
 
 type Tab = "raw" | "processed" | "summary";
 
-export function ResultCard({ result, processedText, summary }: ResultCardProps) {
+export function ResultCard({ result, processedText, summary }: Props) {
   const hasProcessed = !!processedText;
   const hasSummary = !!summary;
 
@@ -32,59 +32,88 @@ export function ResultCard({ result, processedText, summary }: ResultCardProps) 
       await navigator.clipboard.writeText(displayText ?? "");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
+    } catch { /* ignorar */ }
   }
 
   const tabs: { id: Tab; label: string; show: boolean }[] = [
-    { id: "raw", label: "Transcripción", show: true },
+    { id: "raw", label: "Original", show: true },
     { id: "processed", label: "Procesado", show: hasProcessed },
     { id: "summary", label: "Resumen clínico", show: hasSummary },
   ];
 
   return (
-    <div className="space-y-3 rounded-2xl border border-rose-500 bg-rose-100 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-rose-700">Resultado</h2>
-          <p className="text-xs text-rose-400 dark:text-slate-400">
+    <div
+      style={{
+        backgroundColor: "var(--bg-card)",
+        border: "1px solid var(--border)",
+      }}
+      className="overflow-hidden rounded-2xl"
+    >
+      {/* Header */}
+      <div
+        style={{ borderBottom: "1px solid var(--border)" }}
+        className="flex items-center justify-between gap-3 px-4 py-3"
+      >
+        <div className="min-w-0">
+          <p style={{ color: "var(--text-1)" }} className="truncate text-sm font-semibold">
             {result.fileName}
-            {result.durationSec > 0 && ` · ${formatDuration(result.durationSec)}`}
           </p>
+          {result.durationSec > 0 && (
+            <p style={{ color: "var(--text-3)" }} className="text-xs">
+              {formatDuration(result.durationSec)}
+            </p>
+          )}
         </div>
         <button
           type="button"
           onClick={handleCopy}
-          className="shrink-0 rounded-md border border-rose-500 px-3 py-1.5 text-xs font-medium text-rose-500 bg-transparent transition hover:text-rose-100 hover:bg-rose-500"
+          style={{
+            backgroundColor: copied ? "var(--accent)" : "var(--bg-subtle)",
+            border: "1px solid var(--border-strong)",
+            color: copied ? "var(--accent-fg)" : "var(--text-2)",
+          }}
+          className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150"
         >
           {copied ? "¡Copiado!" : "Copiar"}
         </button>
       </div>
 
+      {/* Tabs */}
       {(hasProcessed || hasSummary) && (
-        <div className="flex gap-1 border-b border-rose-200">
-          {tabs
-            .filter((t) => t.show)
-            .map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 text-xs font-medium transition ${
-                  activeTab === tab.id
-                    ? "border-b-2 border-rose-500 text-rose-500"
-                    : "text-rose-300 hover:text-rose-500"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+        <div
+          style={{ borderBottom: "1px solid var(--border)" }}
+          className="flex gap-0"
+        >
+          {tabs.filter((t) => t.show).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                color: activeTab === tab.id ? "var(--text-1)" : "var(--text-3)",
+                borderBottom: activeTab === tab.id
+                  ? "2px solid var(--accent)"
+                  : "2px solid transparent",
+              }}
+              className="px-4 py-2.5 text-xs font-medium transition-all duration-150 hover:opacity-80"
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       )}
 
-      <div className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md bg-rose-100 p-3 text-sm leading-relaxed text-rose-700">
-        {displayText || "Sin contenido."}
+      {/* Content */}
+      <div
+        style={{
+          backgroundColor: "var(--bg-result)",
+          color: "var(--text-1)",
+        }}
+        className="max-h-96 overflow-y-auto whitespace-pre-wrap p-4 text-sm leading-relaxed"
+      >
+        {displayText || (
+          <span style={{ color: "var(--text-3)" }}>Sin contenido.</span>
+        )}
       </div>
     </div>
   );
