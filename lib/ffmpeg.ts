@@ -1,14 +1,18 @@
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegStatic from "ffmpeg-static";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const ffprobeStatic = require("ffprobe-static") as { path: string };
 
 let configured = false;
 
 export function configureFfmpeg(): typeof ffmpeg {
   if (!configured) {
-    const binaryPath = ffmpegStatic as unknown as string | null;
-    if (binaryPath) {
-      ffmpeg.setFfmpegPath(binaryPath);
-    }
+    const ffmpegPath = ffmpegStatic as unknown as string | null;
+    if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+
+    const ffprobePath = ffprobeStatic?.path;
+    if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
+
     configured = true;
   }
   return ffmpeg;
