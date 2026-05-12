@@ -16,6 +16,7 @@ export interface TranscriptionResult {
   fullText: string;
   markdown: string;
   segments: TranscriptionSegment[];
+  verboseSegments?: VerboseSegment[];
   durationSec: number;
 }
 
@@ -33,4 +34,11 @@ export interface PostProcessOptions {
 export interface PostProcessResult {
   processedText: string;
   summary: string | null;
+}
+
+export interface VerboseSegment {
+  start: number; // segundos desde el inicio del audio completo
+  end: number;
+  text: string;
+  gapBefore: number; // pausa respecto al segmento anterior (segundos)
 }

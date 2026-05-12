@@ -76,7 +76,11 @@ export default function HomePage() {
       const res = await fetch("/api/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: transcription.fullText, options }),
+        body: JSON.stringify({
+          text: transcription.fullText,
+          options,
+          verboseSegments: transcription.verboseSegments,
+        }),
       });
 
       if (!res.ok) {

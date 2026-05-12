@@ -1,60 +1,105 @@
 import fs from "node:fs";
 import { getGroqClient, GROQ_TRANSCRIPTION_MODEL } from "./groq";
 import type { AudioChunk } from "./splitAudio";
-import type { TranscriptionSegment } from "@/types/transcription";
+import type { TranscriptionSegment, VerboseSegment } from "@/types/transcription";
 
-export async function transcribeChunk(chunk: AudioChunk): Promise<string> {
+interface WhisperVerboseSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+interface WhisperVerboseResponse {
+  text: string;
+  segments?: WhisperVerboseSegment[];
+}
+
+interface ChunkResult {
+  text: string;
+  verboseSegments: VerboseSegment[];
+}
+
+export async function transcribeChunk(chunk: AudioChunk): Promise<ChunkResult> {
   const client = getGroqClient();
   const stream = fs.createReadStream(chunk.filePath);
 
-  const response = await client.audio.transcriptions.create({
+  const raw = await client.audio.transcriptions.create({
     file: stream,
     model: GROQ_TRANSCRIPTION_MODEL,
-    response_format: "text",
+    response_format: "verbose_json",
   });
 
-  if (typeof response === "string") return response.trim();
-  const maybeText = (response as { text?: string }).text;
-  return (maybeText ?? "").trim();
+  const response = raw as unknown as WhisperVerboseResponse;
+  const text = response.text?.trim() ?? "";
+  const rawSegs = response.segments ?? [];
+
+  let prevEnd = chunk.startSec;
+  const verboseSegments: VerboseSegment[] = rawSegs
+    .filter((s) => s.text.trim())
+    .map((s) => {
+      const abs: VerboseSegment = {
+        start: chunk.startSec + s.start,
+        end: chunk.startSec + s.end,
+        text: s.text.trim(),
+        gapBefore: Math.max(0, chunk.startSec + s.start - prevEnd),
+      };
+      prevEnd = chunk.startSec + s.end;
+      return abs;
+    });
+
+  return { text, verboseSegments };
 }
 
-export async function transcribeChunks(
-  chunks: AudioChunk[],
-): Promise<TranscriptionSegment[]> {
+export async function transcribeChunks(chunks: AudioChunk[]): Promise<{
+  segments: TranscriptionSegment[];
+  verboseSegments: VerboseSegment[];
+}> {
   const segments: TranscriptionSegment[] = [];
+  const verboseSegments: VerboseSegment[] = [];
 
   for (const chunk of chunks) {
-    const text = await transcribeChunk(chunk);
-    segments.push({
-      startMs: Math.round(chunk.startSec * 1000),
-      text,
-    });
+    const result = await transcribeChunk(chunk);
+    segments.push({ startMs: Math.round(chunk.startSec * 1000), text: result.text });
+    verboseSegments.push(...result.verboseSegments);
   }
 
-  return segments;
+  return { segments, verboseSegments };
 }
 
-/** Transcribe un archivo directamente sin pasar por ffmpeg (para archivos < 25 MB). */
 export async function transcribeFileDirect(
   filePath: string,
   originalName: string,
-): Promise<TranscriptionSegment[]> {
+): Promise<{ segments: TranscriptionSegment[]; verboseSegments: VerboseSegment[] }> {
   const client = getGroqClient();
-
-  // El SDK de OpenAI acepta un ReadStream con propiedad `path` como nombre de archivo.
   const stream = fs.createReadStream(filePath);
   (stream as NodeJS.ReadableStream & { name?: string }).name = originalName;
 
-  const response = await client.audio.transcriptions.create({
+  const raw = await client.audio.transcriptions.create({
     file: stream as unknown as File,
     model: GROQ_TRANSCRIPTION_MODEL,
-    response_format: "text",
+    response_format: "verbose_json",
   });
 
-  const text =
-    typeof response === "string"
-      ? response.trim()
-      : ((response as { text?: string }).text ?? "").trim();
+  const response = raw as unknown as WhisperVerboseResponse;
+  const text = response.text?.trim() ?? "";
+  const rawSegs = response.segments ?? [];
 
-  return [{ startMs: 0, text }];
+  let prevEnd = 0;
+  const verboseSegments: VerboseSegment[] = rawSegs
+    .filter((s) => s.text.trim())
+    .map((s) => {
+      const seg: VerboseSegment = {
+        start: s.start,
+        end: s.end,
+        text: s.text.trim(),
+        gapBefore: Math.max(0, s.start - prevEnd),
+      };
+      prevEnd = s.end;
+      return seg;
+    });
+
+  return {
+    segments: [{ startMs: 0, text }],
+    verboseSegments,
+  };
 }

@@ -54,9 +54,11 @@ export async function POST(req: Request) {
     let segments;
     let durationSec = 0;
 
+    let verboseSegments;
+
     if (fileSizeBytes <= GROQ_MAX_BYTES) {
       // Archivo pequeño: enviar directo a Groq sin ffmpeg
-      segments = await transcribeFileDirect(uploadedPath, originalName);
+      ({ segments, verboseSegments } = await transcribeFileDirect(uploadedPath, originalName));
       durationSec = 0;
     } else {
       // Archivo grande: usar ffmpeg para dividir
@@ -84,7 +86,7 @@ export async function POST(req: Request) {
         );
       }
 
-      segments = await transcribeChunks(chunks);
+      ({ segments, verboseSegments } = await transcribeChunks(chunks));
       durationSec = duration;
     }
 
@@ -97,6 +99,7 @@ export async function POST(req: Request) {
       fullText,
       markdown,
       segments,
+      verboseSegments,
       durationSec,
     };
 

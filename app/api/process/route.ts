@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { postProcessTranscription } from "@/lib/postprocess";
-import type { PostProcessOptions } from "@/types/transcription";
+import type { PostProcessOptions, VerboseSegment } from "@/types/transcription";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -10,10 +10,12 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       text?: string;
       options?: PostProcessOptions;
+      verboseSegments?: VerboseSegment[];
     };
 
     const text = body.text?.trim();
     const options = body.options;
+    const verboseSegments = body.verboseSegments;
 
     if (!text) {
       return NextResponse.json(
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await postProcessTranscription(text, options);
+    const result = await postProcessTranscription(text, options, verboseSegments);
     return NextResponse.json(result);
   } catch (err) {
     console.error("[process] error:", err);
