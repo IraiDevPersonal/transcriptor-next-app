@@ -5,14 +5,31 @@ import type { TranscriptionResult } from "@/types/transcription";
 
 interface ResultCardProps {
   result: TranscriptionResult;
+  processedText?: string;
+  summary?: string | null;
 }
 
-export function ResultCard({ result }: ResultCardProps) {
+type Tab = "raw" | "processed" | "summary";
+
+export function ResultCard({ result, processedText, summary }: ResultCardProps) {
+  const hasProcessed = !!processedText;
+  const hasSummary = !!summary;
+
+  const [activeTab, setActiveTab] = useState<Tab>(
+    hasProcessed ? "processed" : "raw",
+  );
   const [copied, setCopied] = useState(false);
+
+  const displayText =
+    activeTab === "processed" && hasProcessed
+      ? processedText
+      : activeTab === "summary" && hasSummary
+        ? summary
+        : result.fullText;
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(result.fullText);
+      await navigator.clipboard.writeText(displayText ?? "");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -20,28 +37,54 @@ export function ResultCard({ result }: ResultCardProps) {
     }
   }
 
+  const tabs: { id: Tab; label: string; show: boolean }[] = [
+    { id: "raw", label: "Transcripción", show: true },
+    { id: "processed", label: "Procesado", show: hasProcessed },
+    { id: "summary", label: "Resumen clínico", show: hasSummary },
+  ];
+
   return (
-    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3 rounded-2xl border border-rose-500 bg-rose-100 p-4">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Transcripción
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {result.fileName} · {formatDuration(result.durationSec)}
+          <h2 className="text-sm font-semibold text-rose-700">Resultado</h2>
+          <p className="text-xs text-rose-400 dark:text-slate-400">
+            {result.fileName}
+            {result.durationSec > 0 && ` · ${formatDuration(result.durationSec)}`}
           </p>
         </div>
         <button
           type="button"
           onClick={handleCopy}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          className="shrink-0 rounded-md border border-rose-500 px-3 py-1.5 text-xs font-medium text-rose-500 bg-transparent transition hover:text-rose-100 hover:bg-rose-500"
         >
           {copied ? "¡Copiado!" : "Copiar"}
         </button>
       </div>
 
-      <div className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm leading-relaxed text-slate-800 dark:bg-slate-950 dark:text-slate-200">
-        {result.fullText || "Sin contenido."}
+      {(hasProcessed || hasSummary) && (
+        <div className="flex gap-1 border-b border-rose-200">
+          {tabs
+            .filter((t) => t.show)
+            .map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-1.5 text-xs font-medium transition ${
+                  activeTab === tab.id
+                    ? "border-b-2 border-rose-500 text-rose-500"
+                    : "text-rose-300 hover:text-rose-500"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+        </div>
+      )}
+
+      <div className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md bg-rose-100 p-3 text-sm leading-relaxed text-rose-700">
+        {displayText || "Sin contenido."}
       </div>
     </div>
   );

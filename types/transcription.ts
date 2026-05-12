@@ -22,3 +22,15 @@ export interface TranscriptionResult {
 export interface TranscriptionError {
   error: string;
 }
+
+export interface PostProcessOptions {
+  fixPunctuation: boolean;
+  separateSpeakers: boolean;
+  cleanupFillers: boolean;
+  clinicalSummary: boolean;
+}
+
+export interface PostProcessResult {
+  processedText: string;
+  summary: string | null;
+}
