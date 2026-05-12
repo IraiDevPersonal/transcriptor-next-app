@@ -9,7 +9,7 @@ export interface AudioChunk {
   durationSec: number;
 }
 
-const CHUNK_DURATION_SEC = 10 * 60;
+const CHUNK_DURATION_SEC = 5 * 60;
 
 export async function splitAudioIntoChunks(
   inputPath: string,
