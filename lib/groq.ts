@@ -1,13 +1,16 @@
 import OpenAI from "openai";
+import { envs } from "./envs";
 
 let cachedClient: OpenAI | null = null;
 
 export function getGroqClient(): OpenAI {
   if (cachedClient) return cachedClient;
 
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = envs.groq.apiKey;
   if (!apiKey) {
-    throw new Error("GROQ_API_KEY no está configurado en las variables de entorno.");
+    throw new Error(
+      "GROQ_API_KEY no está configurado en las variables de entorno.",
+    );
   }
 
   cachedClient = new OpenAI({

@@ -1,6 +1,7 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 import { configureFfmpeg, probeDuration } from "./ffmpeg";
+import { envs } from "./envs";
 
 export interface AudioChunk {
   index: number;
@@ -9,7 +10,7 @@ export interface AudioChunk {
   durationSec: number;
 }
 
-const CHUNK_DURATION_SEC = 5 * 60;
+const CHUNK_DURATION_SEC = envs.audio.chunkDurationMin * 60;
 
 export async function splitAudioIntoChunks(
   inputPath: string,
@@ -27,7 +28,10 @@ export async function splitAudioIntoChunks(
 
   for (let start = 0; start < totalDuration; start += CHUNK_DURATION_SEC) {
     const duration = Math.min(CHUNK_DURATION_SEC, totalDuration - start);
-    const chunkFile = path.join(outputDir, `chunk_${String(index).padStart(3, "0")}.mp3`);
+    const chunkFile = path.join(
+      outputDir,
+      `chunk_${String(index).padStart(3, "0")}.mp3`,
+    );
 
     await extractChunk(inputPath, chunkFile, start, duration);
 
