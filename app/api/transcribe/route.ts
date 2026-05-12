@@ -14,8 +14,8 @@ export const maxDuration = 300;
 const ALLOWED_EXTENSIONS = new Set([".mp3", ".wav", ".m4a", ".webm"]);
 const MAX_DURATION_SEC = 60 * 60;
 
-const UPLOAD_DIR = path.join(process.cwd(), "temp", "uploads");
-const CHUNK_ROOT = path.join(process.cwd(), "temp", "chunks");
+const UPLOAD_DIR = path.join("/tmp", "uploads");
+const CHUNK_ROOT = path.join("/tmp", "chunks");
 
 export async function POST(req: Request) {
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
