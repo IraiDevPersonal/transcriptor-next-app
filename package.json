@@ -20,6 +20,9 @@
     "react-dom": "^19.0.0",
     "zod": "^4.4.3"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["ffmpeg-static", "ffprobe-static"]
+  },
   "devDependencies": {
     "@types/fluent-ffmpeg": "^2.1.27",
     "@types/formidable": "^3.4.5",
