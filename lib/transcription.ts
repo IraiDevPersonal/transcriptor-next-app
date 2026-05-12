@@ -33,3 +33,28 @@ export async function transcribeChunks(
 
   return segments;
 }
+
+/** Transcribe un archivo directamente sin pasar por ffmpeg (para archivos < 25 MB). */
+export async function transcribeFileDirect(
+  filePath: string,
+  originalName: string,
+): Promise<TranscriptionSegment[]> {
+  const client = getGroqClient();
+
+  // El SDK de OpenAI acepta un ReadStream con propiedad `path` como nombre de archivo.
+  const stream = fs.createReadStream(filePath);
+  (stream as NodeJS.ReadableStream & { name?: string }).name = originalName;
+
+  const response = await client.audio.transcriptions.create({
+    file: stream as unknown as File,
+    model: GROQ_TRANSCRIPTION_MODEL,
+    response_format: "text",
+  });
+
+  const text =
+    typeof response === "string"
+      ? response.trim()
+      : ((response as { text?: string }).text ?? "").trim();
+
+  return [{ startMs: 0, text }];
+}

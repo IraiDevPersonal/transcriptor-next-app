@@ -3,7 +3,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { parseMultipart } from "@/lib/parseUpload";
 import { splitAudioIntoChunks } from "@/lib/splitAudio";
-import { transcribeChunks } from "@/lib/transcription";
+import { transcribeChunks, transcribeFileDirect } from "@/lib/transcription";
 import { buildMarkdown, buildPlainText } from "@/lib/markdown";
 import { probeDuration } from "@/lib/ffmpeg";
 import type { TranscriptionResult } from "@/types/transcription";
@@ -13,6 +13,8 @@ export const maxDuration = 300;
 
 const ALLOWED_EXTENSIONS = new Set([".mp3", ".wav", ".m4a", ".webm"]);
 const MAX_DURATION_SEC = 60 * 60;
+// Groq acepta hasta 25 MB. Por debajo de este límite no necesitamos ffmpeg.
+const GROQ_MAX_BYTES = 24 * 1024 * 1024;
 
 const UPLOAD_DIR = path.join("/tmp", "uploads");
 const CHUNK_ROOT = path.join("/tmp", "chunks");
@@ -39,6 +41,7 @@ export async function POST(req: Request) {
     uploadedPath = file.filepath;
     const originalName = file.originalFilename ?? "audio";
     const ext = path.extname(originalName).toLowerCase();
+    const fileSizeBytes = file.size ?? 0;
 
     if (!ALLOWED_EXTENSIONS.has(ext)) {
       return NextResponse.json(
@@ -47,33 +50,45 @@ export async function POST(req: Request) {
       );
     }
 
-    const duration = await probeDuration(uploadedPath);
-    if (!duration || duration <= 0) {
-      return NextResponse.json(
-        { error: "No se pudo leer el archivo de audio." },
-        { status: 400 },
-      );
-    }
-    if (duration > MAX_DURATION_SEC) {
-      return NextResponse.json(
-        { error: `Audio demasiado largo (${Math.round(duration / 60)} min). Máximo permitido: ${MAX_DURATION_SEC / 60} min.` },
-        { status: 400 },
-      );
-    }
-
-    chunkDir = path.join(CHUNK_ROOT, `job_${Date.now()}`);
-    const chunks = await splitAudioIntoChunks(uploadedPath, chunkDir);
-
-    if (chunks.length === 0) {
-      return NextResponse.json(
-        { error: "No se pudieron generar fragmentos del audio." },
-        { status: 500 },
-      );
-    }
-
-    const segments = await transcribeChunks(chunks);
-    const fullText = buildPlainText(segments);
     const date = new Date().toISOString().slice(0, 10);
+    let segments;
+    let durationSec = 0;
+
+    if (fileSizeBytes <= GROQ_MAX_BYTES) {
+      // Archivo pequeño: enviar directo a Groq sin ffmpeg
+      segments = await transcribeFileDirect(uploadedPath, originalName);
+      durationSec = 0;
+    } else {
+      // Archivo grande: usar ffmpeg para dividir
+      const duration = await probeDuration(uploadedPath);
+      if (!duration || duration <= 0) {
+        return NextResponse.json(
+          { error: "No se pudo leer el archivo de audio." },
+          { status: 400 },
+        );
+      }
+      if (duration > MAX_DURATION_SEC) {
+        return NextResponse.json(
+          { error: `Audio demasiado largo (${Math.round(duration / 60)} min). Máximo permitido: ${MAX_DURATION_SEC / 60} min.` },
+          { status: 400 },
+        );
+      }
+
+      chunkDir = path.join(CHUNK_ROOT, `job_${Date.now()}`);
+      const chunks = await splitAudioIntoChunks(uploadedPath, chunkDir);
+
+      if (chunks.length === 0) {
+        return NextResponse.json(
+          { error: "No se pudieron generar fragmentos del audio." },
+          { status: 500 },
+        );
+      }
+
+      segments = await transcribeChunks(chunks);
+      durationSec = duration;
+    }
+
+    const fullText = buildPlainText(segments);
     const markdown = buildMarkdown(originalName, date, segments);
 
     const result: TranscriptionResult = {
@@ -82,7 +97,7 @@ export async function POST(req: Request) {
       fullText,
       markdown,
       segments,
-      durationSec: duration,
+      durationSec,
     };
 
     return NextResponse.json(result);
